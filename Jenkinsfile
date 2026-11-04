@@ -10,6 +10,11 @@ def mvn(String args) {
 pipeline {
     agent any
 
+    tools {
+        jdk 'JDK17'
+        maven 'Maven310'
+    }
+
     options {
         timestamps()
         timeout(time: 15, unit: 'MINUTES')
