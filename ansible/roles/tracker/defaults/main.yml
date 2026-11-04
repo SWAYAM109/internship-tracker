@@ -1,0 +1,4 @@
+---
+app_port: 8081
+app_dir: /opt/tracker
+jar_source: "{{ playbook_dir }}/../target/tracker.jar"

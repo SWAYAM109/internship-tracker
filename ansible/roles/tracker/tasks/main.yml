@@ -1,0 +1,39 @@
+---
+- name: Install Java runtime
+  apt:
+    name: openjdk-17-jre-headless
+    state: present
+    update_cache: true
+
+- name: Create application directory
+  file:
+    path: "{{ app_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Copy built JAR to server
+  copy:
+    src: "{{ jar_source }}"
+    dest: "{{ app_dir }}/tracker.jar"
+    mode: "0644"
+  notify: Restart tracker
+
+- name: Install systemd service file
+  template:
+    src: tracker.service.j2
+    dest: /etc/systemd/system/tracker.service
+    mode: "0644"
+  notify: Restart tracker
+
+- name: Enable and start tracker service
+  systemd:
+    name: "{{ service_name }}"
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Wait for the app to come up
+  wait_for:
+    port: "{{ app_port }}"
+    delay: 5
+    timeout: 90

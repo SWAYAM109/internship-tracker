@@ -1,0 +1,11 @@
+[Unit]
+Description=Internship Application Tracker
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/java -jar {{ app_dir }}/tracker.jar --server.port={{ app_port }}
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
