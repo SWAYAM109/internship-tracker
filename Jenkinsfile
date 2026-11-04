@@ -1,29 +1,59 @@
+// Works on Linux/macOS (sh) and Windows (bat) Jenkins agents.
+def mvn(String args) {
+    if (isUnix()) {
+        sh "mvn -B ${args}"
+    } else {
+        bat "mvn -B ${args}"
+    }
+}
+
 pipeline {
     agent any
 
-    // Poll Git every minute (webhooks do not work with a localhost Jenkins)
-    triggers { pollSCM('* * * * *') }
+    options {
+        timestamps()
+        timeout(time: 15, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '20', artifactNumToKeepStr: '10'))
+    }
+
+    triggers {
+        // Instant trigger when the GitHub webhook fires (needs a publicly reachable Jenkins)
+        githubPush()
+        // Fallback for a localhost Jenkins where webhooks cannot reach it
+        pollSCM('H/2 * * * *')
+    }
 
     stages {
         stage('Checkout') {
             steps { checkout scm }
         }
-        // CI ENHANCEMENT 1: automated unit tests run before the build
+
+        stage('Compile') {
+            steps { mvn 'clean compile' }
+        }
+
+        // CI ENHANCEMENT: JUnit tests gate the build. Maven exits non-zero on any
+        // failed test, so the stage fails and later stages (package/archive) never run.
         stage('Test') {
-            steps { sh 'mvn -B clean test' }
-            post { always { junit 'target/surefire-reports/*.xml' } }
+            steps { mvn 'test' }
+            post {
+                always { junit testResults: 'target/surefire-reports/*.xml', allowEmptyResults: false }
+            }
         }
-        stage('Build') {
-            steps { sh 'mvn -B package -DskipTests' }
+
+        stage('Package') {
+            steps { mvn 'package -DskipTests' }
         }
-        // CI ENHANCEMENT 2: version the artifact with the Jenkins build number
-        stage('Version Artifact') {
-            steps { sh 'cp target/tracker.jar target/tracker-${BUILD_NUMBER}.jar' }
+
+        stage('Archive') {
+            steps {
+                archiveArtifacts artifacts: 'target/tracker.jar', fingerprint: true, onlyIfSuccessful: true
+            }
         }
     }
 
     post {
-        success { archiveArtifacts artifacts: 'target/tracker-*.jar', fingerprint: true }
-        failure { echo 'Build failed - check the console output.' }
+        success { echo 'Build succeeded: tests passed and target/tracker.jar archived.' }
+        failure { echo 'Build failed - check compile errors or failing tests in the console output.' }
     }
 }
