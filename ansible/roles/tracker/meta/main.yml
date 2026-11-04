@@ -1,0 +1,10 @@
+---
+galaxy_info:
+  author: student
+  description: Installs Java and runs the Internship Tracker as a systemd service
+  license: MIT
+  min_ansible_version: "2.9"
+  platforms:
+    - name: Ubuntu
+      versions: [all]
+dependencies: []

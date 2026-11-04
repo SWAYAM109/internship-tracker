@@ -1,0 +1,9 @@
+---
+- name: Configure server and deploy Internship Tracker
+  hosts: appservers
+  become: true
+  vars:
+    app_port: 8081                                   # VARIABLE: app port
+    jar_source: "{{ playbook_dir }}/../target/tracker.jar"
+  roles:
+    - tracker                                        # ROLE
